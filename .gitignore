@@ -1,0 +1,13 @@
+# Visual Studio e .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.db
+appsettings.Development.json
+
+# Node.js e React
+node_modules/
+dist/
+.env

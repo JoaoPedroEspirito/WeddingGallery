@@ -7,6 +7,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Http;
 
 namespace WeddingGallery.Api.Controllers
 {
@@ -16,14 +17,15 @@ namespace WeddingGallery.Api.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IStorageService _storageService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public PhotosController(AppDbContext context, IStorageService storageService)
+        public PhotosController(AppDbContext context, IStorageService storageService, IHttpClientFactory httpClientFactory)
         {
             _context = context;
             _storageService = storageService;
+            _httpClientFactory = httpClientFactory;
         }
 
-        
         [HttpPost]
         public async Task<IActionResult> UploadPhoto([FromRoute] Guid eventId, [FromForm] IFormFile file, [FromForm] string guestName = "Anônimo")
         {
@@ -33,16 +35,14 @@ namespace WeddingGallery.Api.Controllers
 
             try
             {
-                
                 using var originalStream = file.OpenReadStream();
                 var originalUrl = await _storageService.UploadFileAsync(originalStream, file.FileName, eventId);
 
-                
                 using var image = await Image.LoadAsync(file.OpenReadStream());
 
                 image.Mutate(x => x.Resize(new ResizeOptions
                 {
-                    Size = new Size(400, 400), 
+                    Size = new Size(400, 400),
                     Mode = ResizeMode.Crop
                 }));
 
@@ -52,7 +52,6 @@ namespace WeddingGallery.Api.Controllers
 
                 var thumbnailUrl = await _storageService.UploadFileAsync(thumbnailStream, $"thumb_{file.FileName}", eventId);
 
-                
                 var photo = new Photo
                 {
                     EventId = eventId,
@@ -82,11 +81,9 @@ namespace WeddingGallery.Api.Controllers
             }
         }
 
-        
         [HttpGet]
         public async Task<IActionResult> GetPhotos([FromRoute] Guid eventId)
         {
-            
             var photos = await _context.Photos
                 .Where(p => p.EventId == eventId)
                 .OrderByDescending(p => p.UploadedAt)
@@ -102,7 +99,7 @@ namespace WeddingGallery.Api.Controllers
 
             return Ok(photos);
         }
-        
+
         [HttpGet("{photoId}/download")]
         public async Task<IActionResult> DownloadPhoto([FromRoute] Guid eventId, [FromRoute] Guid photoId)
         {
@@ -110,31 +107,24 @@ namespace WeddingGallery.Api.Controllers
             if (photo == null || photo.EventId != eventId)
                 return NotFound("Foto não encontrada.");
 
-           
-            var relativePath = photo.StorageReference.TrimStart('/');
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath);
-
-            if (!System.IO.File.Exists(filePath))
-                return NotFound("Arquivo físico não encontrado no servidor.");
-
-            var memory = new MemoryStream();
-            using (var stream = new FileStream(filePath, FileMode.Open))
+            var client = _httpClientFactory.CreateClient();
+            try
             {
-                await stream.CopyToAsync(memory);
+                var stream = await client.GetStreamAsync(photo.StorageReference);
+                return File(stream, photo.ContentType, photo.OriginalFileName);
             }
-            memory.Position = 0;
-
-            
-            return File(memory, photo.ContentType, photo.OriginalFileName);
+            catch
+            {
+                return NotFound("Arquivo não encontrado no bucket de armazenamento.");
+            }
         }
-        
+
         [HttpPost("download-batch")]
         public async Task<IActionResult> DownloadBatch([FromRoute] Guid eventId, [FromBody] List<Guid> photoIds)
         {
             if (photoIds == null || !photoIds.Any())
                 return BadRequest("Nenhuma foto foi selecionada.");
 
-            
             var photos = await _context.Photos
                 .Where(p => p.EventId == eventId && photoIds.Contains(p.Id))
                 .ToListAsync();
@@ -143,35 +133,34 @@ namespace WeddingGallery.Api.Controllers
                 return NotFound("As fotos selecionadas não foram encontradas.");
 
             var memoryStream = new MemoryStream();
+            var client = _httpClientFactory.CreateClient();
 
-            
             using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
             {
                 foreach (var photo in photos)
                 {
-                    var relativePath = photo.StorageReference.TrimStart('/');
-                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath);
-
-                    if (System.IO.File.Exists(filePath))
+                    try
                     {
-                        
+                      
+                        var fileStream = await client.GetStreamAsync(photo.StorageReference);
                         var entryName = $"{photo.Id}_{photo.OriginalFileName}";
                         var zipEntry = archive.CreateEntry(entryName, CompressionLevel.Optimal);
 
                         using (var entryStream = zipEntry.Open())
-                        using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
                         {
                             await fileStream.CopyToAsync(entryStream);
                         }
                     }
+                    catch
+                    {
+                        
+                        continue;
+                    }
                 }
             }
 
-            
             memoryStream.Position = 0;
-
             return File(memoryStream, "application/zip", "Selecao_Casamento.zip");
         }
-
     }
 }

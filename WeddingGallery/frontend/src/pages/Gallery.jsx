@@ -252,7 +252,7 @@ export default function Gallery() {
                         </button>
 
                         <div style={{ position: 'relative', maxWidth: '85%', maxHeight: '70vh' }}>
-                            <img src={`https://localhost:7189${currentPhoto.originalUrl}`} alt="Ampliada" style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '12px', objectFit: 'contain', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', margin: '0 auto', display: 'block' }} />
+                            <img src={currentPhoto.originalUrl} alt="Ampliada" style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '12px', objectFit: 'contain', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', margin: '0 auto', display: 'block' }} />
                         </div>
 
                         <button onClick={handleNext} style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(4px)', border: 'none', borderRadius: '50%', width: '45px', height: '45px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', color: colors.primary, zIndex: 1001 }}>
@@ -264,7 +264,7 @@ export default function Gallery() {
                         </p>
 
                         <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
-                            <a href={`https://localhost:7189/api/events/${eventId}/photos/${currentPhoto.id}/download`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: colors.primary, color: 'white', textDecoration: 'none', borderRadius: '30px', fontSize: '14px', fontWeight: '500', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                            <a href={`${import.meta.env.VITE_API_URL}/events/${eventId}/photos/${currentPhoto.id}/download`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: colors.primary, color: 'white', textDecoration: 'none', borderRadius: '30px', fontSize: '14px', fontWeight: '500', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                                 <Download size={18} />
                                 Salvar
                             </a>

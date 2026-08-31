@@ -30,14 +30,22 @@ export default function Home() {
 
         try {
             const response = await api.get(`/events/${accessCode}`);
-
             localStorage.setItem('@WeddingGallery:guestName', guestName);
-
             navigate(`/events/${response.data.id}`);
         } catch (err) {
-            if (err.response && err.response.status === 404) {
-                setError('Código inválido. Verifique o convite e tente novamente.');
+            if (err.response) {
+                if (err.response.status === 401) {
+                    
+                    setError('Código inválido. Verifique o convite e tente novamente.');
+                } else if (err.response.status === 404) {
+                    
+                    setError('Evento não configurado. Avise os noivos!');
+                } else {
+                    
+                    setError('Erro interno no servidor. Tente novamente mais tarde.');
+                }
             } else {
+                
                 setError('Erro ao conectar com o servidor.');
             }
         } finally {

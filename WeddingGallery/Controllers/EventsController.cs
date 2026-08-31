@@ -34,25 +34,26 @@ namespace WeddingGallery.Api.Controllers
 
             return Ok(newEvent);
         }
-
+        
         [HttpGet("{accessCode}")]
         public async Task<IActionResult> GetEventByCode([FromRoute] string accessCode)
         {
             var senhaCorreta = _configuration["CodigoAcesso"];
 
-            if (string.IsNullOrEmpty(senhaCorreta) || accessCode != senhaCorreta)
-                return Unauthorized("Código de evento inválido.");
+            if (string.IsNullOrEmpty(senhaCorreta) || accessCode.Trim().ToUpper() != senhaCorreta.Trim().ToUpper())
+                return Unauthorized(new { message = "Código de evento inválido." });
 
             var ev = await _context.Events.FirstOrDefaultAsync();
 
             if (ev == null)
-                return NotFound("Evento não configurado no banco de dados.");
+                return NotFound(new { message = "Evento não configurado no banco de dados." });
 
             return Ok(new
             {
                 ev.Id,
                 ev.Title,
-                ev.EventDate
+                ev.EventDate,
+                AccessCode = senhaCorreta
             });
         }
     }

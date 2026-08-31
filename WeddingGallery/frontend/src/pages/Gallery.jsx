@@ -192,7 +192,7 @@ export default function Gallery() {
                                         onClick={() => handlePhotoClick(photo, index)}
                                     >
                                         <img
-                                            src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${photo.url}`}
+                                            src={photo.url}
                                             alt="Foto do casamento"
                                             style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block', borderRadius: '4px' }}
                                         />

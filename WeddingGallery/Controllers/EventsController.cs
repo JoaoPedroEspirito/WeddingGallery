@@ -2,6 +2,7 @@
 using WeddingGallery.Api.Data;
 using WeddingGallery.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace WeddingGallery.Api.Controllers
 {
@@ -10,13 +11,14 @@ namespace WeddingGallery.Api.Controllers
     public class EventsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public EventsController(AppDbContext context)
+        public EventsController(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
-        
         [HttpPost]
         public async Task<IActionResult> CreateEvent([FromBody] CreateEventDto dto)
         {
@@ -24,7 +26,7 @@ namespace WeddingGallery.Api.Controllers
             {
                 Title = dto.Title,
                 EventDate = dto.EventDate,
-                AccessCode = dto.AccessCode
+                AccessCode = "NAO_USADO"
             };
 
             _context.Events.Add(newEvent);
@@ -36,12 +38,16 @@ namespace WeddingGallery.Api.Controllers
         [HttpGet("{accessCode}")]
         public async Task<IActionResult> GetEventByCode([FromRoute] string accessCode)
         {
-            var ev = await _context.Events.FirstOrDefaultAsync(e => e.AccessCode == accessCode);
+            var senhaCorreta = _configuration["CodigoAcesso"];
+
+            if (string.IsNullOrEmpty(senhaCorreta) || accessCode != senhaCorreta)
+                return Unauthorized("Código de evento inválido.");
+
+            var ev = await _context.Events.FirstOrDefaultAsync();
 
             if (ev == null)
-                return NotFound("Código de evento inválido.");
+                return NotFound("Evento não configurado no banco de dados.");
 
-            
             return Ok(new
             {
                 ev.Id,
